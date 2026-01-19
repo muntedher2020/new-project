@@ -23,7 +23,7 @@ class EmploymentForm extends Component
     public $errorMessages = [];
     public $submissionToken;
 
-   /*  public function mount($form)
+    /*  public function mount($form)
     {
         $this->form = $form;
         $this->fields = $form->fields()->orderBy('sort_order')->get();
@@ -32,19 +32,19 @@ class EmploymentForm extends Component
         $this->checkPreviousResponse();
     } */
 
-     public function mount($form)
+    public function mount($form)
     {
         $this->form = $form;
         $this->fields = $form->fields()->orderBy('sort_order')->get();
-        
+
         foreach ($this->fields as $field) {
             $this->responses[$field['name']] = '';
         }
-        
+
         // توليد توكن لمنع التقديم المتكرر
         $this->submissionToken = Str::random(40);
         session(['form_submission_token_' . $this->form->id => $this->submissionToken]);
-        
+
         $this->checkPreviousResponse();
     }
 
@@ -57,7 +57,7 @@ class EmploymentForm extends Component
     {
         // التحقق بواسطة متعدد الطرق
         $previousResponse = $this->findPreviousResponse();
-        
+
         if ($previousResponse) {
             $this->responseId = $previousResponse->id;
             $this->loadPreviousData($previousResponse);
@@ -72,7 +72,7 @@ class EmploymentForm extends Component
                 ->where('user_id', Auth::id())
                 ->first();
         }
-        
+
         // 2. التحقق بواسطة الـ IP و User Agent معاً
         $response = FormResponses::where('electronic_forms_id', $this->form->id)
             ->whereNull('user_id')
@@ -80,7 +80,7 @@ class EmploymentForm extends Component
             ->where('user_agent', request()->userAgent())
             ->orderBy('created_at', 'desc')
             ->first();
-            
+
         if ($response) {
             // التحقق من فترة التبريد
             $cooldown = $this->getCooldownPeriod();
@@ -88,7 +88,7 @@ class EmploymentForm extends Component
                 return $response;
             }
         }
-        
+
         // 3. التحقق بواسطة Browser Fingerprint
         $fingerprint = $this->generateFingerprint();
         return FormResponses::where('electronic_forms_id', $this->form->id)
@@ -105,7 +105,7 @@ class EmploymentForm extends Component
             'accept_encoding' => request()->header('Accept-Encoding'),
             'screen_resolution' => request()->header('Sec-CH-UA-Platform') ?? 'unknown',
         ];
-        
+
         return md5(serialize($data));
     }
 
@@ -132,31 +132,31 @@ class EmploymentForm extends Component
             $this->addError('form', 'تم اكتشاف محاولة تقديم متكررة');
             return;
         }
-        
+
         // التحقق من rate limiting
         if ($this->isRateLimited()) {
             return;
         }
-        
+
         // التحقق الأساسي
         if (!$this->validateFormAccess()) {
             return;
         }
-        
+
         // التحقق من الصحة
         if (!$this->validateFormData()) {
             return;
         }
-        
+
         // معالجة الملفات
         $this->processFiles();
-        
+
         // حفظ الإجابة
         try {
             DB::beginTransaction();
-            
+
             $responseData = $this->prepareResponseData();
-            
+
             $formResponse = FormResponses::updateOrCreate(
                 [
                     'id' => $this->responseId,
@@ -172,18 +172,17 @@ class EmploymentForm extends Component
                     'submission_hash' => $this->generateSubmissionHash($responseData),
                 ]
             );
-            
+
             DB::commit();
-            
+
             // إزالة التوكن لمنع إعادة الاستخدام
             session()->forget('form_submission_token_' . $this->form->id);
-            
+
             $this->success = true;
             $this->responseId = $formResponse->id;
-            
+
             // زيادة عداد rate limiting
             RateLimiter::hit($this->getRateLimitKey(), 3600);
-            
         } catch (\Exception $e) {
             DB::rollBack();
             $this->addError('form', 'حدث خطأ أثناء حفظ البيانات');
@@ -200,27 +199,27 @@ class EmploymentForm extends Component
     {
         // إنشاء hash فريد للتقديم لمنع التكرار
         $uniqueData = [
-            'form_id' => $this->form->id,
+            'electronic_forms_id' => $this->form->id,
             'user_id' => Auth::id(),
             'ip' => request()->ip(),
             'data' => $data,
             'timestamp' => now()->timestamp,
         ];
-        
+
         return md5(serialize($uniqueData));
     }
 
     protected function isRateLimited(): bool
     {
         $key = $this->getRateLimitKey();
-        
+
         if (RateLimiter::tooManyAttempts($key, 3)) { // 3 محاولات كحد أقصى
             $seconds = RateLimiter::availableIn($key);
             $minutes = ceil($seconds / 60);
             $this->addError('form', "لقد تجاوزت الحد المسموح من المحاولات. حاول مرة أخرى بعد {$minutes} دقيقة");
             return true;
         }
-        
+
         return false;
     }
 
@@ -229,7 +228,7 @@ class EmploymentForm extends Component
         if (Auth::check()) {
             return 'form_submission_user_' . Auth::id();
         }
-        
+
         return 'form_submission_ip_' . request()->ip();
     }
 
@@ -281,7 +280,7 @@ class EmploymentForm extends Component
                 ->where('ip_address', request()->ip())
                 ->where('created_at', '>', now()->subDay())
                 ->exists();
-                
+
             if ($recentResponse) {
                 $this->addError('form', 'يمكنك تقديم هذه الاستمارة مرة واحدة فقط يومياً');
                 return;
@@ -310,11 +309,11 @@ class EmploymentForm extends Component
 
             // حفظ cookie لمدة 30 يوم
             $cookie = Cookie::make(
-                'form_submitted_' . $this->form->id, 
-                $response->id, 
+                'form_submitted_' . $this->form->id,
+                $response->id,
                 60 * 24 * 30 // 30 يوم
             );
-            
+
             Cookie::queue($cookie);
 
             DB::commit();
@@ -486,8 +485,10 @@ class EmploymentForm extends Component
     protected function sendNotifications(FormResponses $response)
     {
         // إرسال إشعار للمسؤول
-        if (isset($this->form->settings['notify_admin']) &&
-            $this->form->settings['notify_admin'] === true) {
+        if (
+            isset($this->form->settings['notify_admin']) &&
+            $this->form->settings['notify_admin'] === true
+        ) {
 
             $adminEmail = config('mail.admin_email');
             if ($adminEmail) {
@@ -497,8 +498,10 @@ class EmploymentForm extends Component
         }
 
         // إرسال تأكيد للمستخدم إذا كان مسجلاً
-        if (Auth::check() && isset($this->form->settings['notify_user']) &&
-            $this->form->settings['notify_user'] === true) {
+        if (
+            Auth::check() && isset($this->form->settings['notify_user']) &&
+            $this->form->settings['notify_user'] === true
+        ) {
 
             // يمكنك إرسال إشعار للمستخدم
             // Auth::user()->notify(new FormResponseSubmitted($response));
@@ -510,7 +513,8 @@ class EmploymentForm extends Component
     {
         // التحقق من البيانات
         if ($this->validateFormData()) {
-            $this->dispatch('show-preview', 
+            $this->dispatch(
+                'show-preview',
                 type: 'success',
                 message: 'جميع البيانات صالحة',
                 data: $this->responses
@@ -521,8 +525,9 @@ class EmploymentForm extends Component
             foreach ($this->getErrorBag()->toArray() as $field => $messages) {
                 $errors[$field] = $messages;
             }
-            
-            $this->dispatch('show-preview', 
+
+            $this->dispatch(
+                'show-preview',
                 type: 'error',
                 errors: $errors
             );

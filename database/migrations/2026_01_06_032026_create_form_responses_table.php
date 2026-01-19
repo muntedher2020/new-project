@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('form_responses', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('form_id');
+            $table->unsignedBigInteger('electronic_forms_id');
             $table->unsignedBigInteger('user_id')->nullable()->comment('المستخدم إذا كان مسجل دخول');
             $table->json('response_data')->comment('بيانات الإجابة');
             $table->enum('status', ['pending', 'approved', 'rejected', 'under_review'])->default('pending');
