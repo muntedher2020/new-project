@@ -1,0 +1,210 @@
+hr {
+  padding: 0px !important;
+  margin: 0px !important;
+}
+
+section {
+  padding: 30px !important;
+}
+
+.swal2-title {
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+}
+
+.swal2-content {
+  font-size: 0.875rem !important;
+}
+
+.mt-n6 {
+  margin-top: -2.5rem !important;
+}
+
+.hero-text-shadow {
+  text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* الوضع الفاتح: صورة سوداء */
+[data-bs-theme="light"] .img-theme-aware {
+  filter: brightness(0) invert(0);
+  /* سوداء */
+}
+
+/* الوضع الداكن: صورة بيضاء */
+[data-bs-theme="dark"] .img-theme-aware {
+  filter: brightness(0) invert(1);
+  /* بيضاء */
+}
+
+.img-theme-aware {
+  transition: filter 0.3s ease-in-out;
+}
+
+/* Navbar */
+/* الوضع الفاتح: صورة سوداء */
+[data-bs-theme="light"] {
+  .navbar {
+    /* background: linear-gradient(135deg, #1C2533 0%, #1C2533 100%); */
+    box-shadow: 0 2px 10px rgba(255, 255, 255, 0.1);
+    padding: 1rem 0;
+  }
+
+  .navbar-brand {
+    font-weight: 700;
+    font-size: 1.8rem;
+    color: rgb(0, 0, 0) !important;
+  }
+
+  .link-nav {
+    color: rgba(0, 0, 0, 0.8) !important;
+    font-weight: 500;
+    margin: 0 0.5rem;
+    transition: all 0.3s ease;
+    border-radius: 10px !important;
+  }
+
+  .link-nav:hover {
+    color: rgb(59, 59, 59) !important;
+    transform: translateY(-2px);
+    background-color: var(--bs-primary) !important;
+    /* background-color: rgba(177, 175, 175) !important; */
+  }
+
+  .link-nav.active {
+    color: rgb(0, 0, 0) !important;
+    border-bottom: 2px solid var(--bs-primary);
+  }
+}
+
+/* الوضع الداكن: صورة بيضاء */
+[data-bs-theme="dark"] {
+  .navbar {
+    /* background: linear-gradient(135deg, #1C2533 0%, #1C2533 100%); */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 1rem 0;
+  }
+
+  .navbar-brand {
+    font-weight: 700;
+    font-size: 1.8rem;
+    color: white !important;
+  }
+
+  .link-nav {
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-weight: 500;
+    margin: 0 0.5rem;
+    transition: all 0.3s ease;
+    border-radius: 10px !important;
+  }
+
+  .link-nav:hover {
+    color: rgb(59, 59, 59) !important;
+    transform: translateY(-2px);
+    background-color: var(--bs-primary) !important;
+  }
+
+  .link-nav.active {
+    color: rgb(255, 255, 255) !important;
+    border-bottom: 2px solid var(--bs-primary);
+  }
+}
+
+/* Card */
+/* .card {
+  border: none;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+} */
+/* خصائص أساسية للـ card */
+.card {
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+/* .card>*:not(a.template-customizer-open-btn) {
+  overflow: hidden;
+} */
+
+.card:hover {
+  /* transform: translateY(-5px); */
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.card-img-top {
+  height: 250px;
+  object-fit: cover;
+}
+
+.card-title {
+  /* color: #667eea; */
+  font-weight: 700;
+  margin-top: 1rem;
+}
+
+.image-container {
+  background-color: #0D2242;
+}
+
+/* الصورة مع التلاشي */
+.image-container img {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+
+  /* التلاشي السفلي */
+  mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 1) 58%,
+    rgba(0, 0, 0, 0.65) 70%,
+    rgba(0, 0, 0, 0.25) 82%,
+    rgba(0, 0, 0, 0) 96%
+  );
+
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 1) 58%,
+    rgba(0, 0, 0, 0.65) 70%,
+    rgba(0, 0, 0, 0.25) 82%,
+    rgba(0, 0, 0, 0) 96%
+  );
+
+  /* تحسين بصري اختياري */
+  box-shadow: inset 0 -60px 60px -30px #0D2242;
+}
+
+.text-block {
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  border-radius: 10px;
+  padding: 10px;
+  transform: translate(0%, -20%);
+}
+
+.carousel-indicators button {
+  background-color: #ffffff !important;
+  border-radius: 50% !important;
+  width: 15px !important;
+  height: 15px !important;
+}
+
+/* Define the keyframes for the rotation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Apply the animation to the icon */
+.icon-spin {
+  animation: spin 2s linear infinite;
+  /* Adjust speed (1s) and timing (linear, infinite) as needed */
+}
