@@ -31,14 +31,13 @@ class FormResponsesExport implements FromCollection, WithHeadings, WithMapping, 
   public function map($row): array
   {
     $data = [
-      $row->id,
-      $row->status,
-      $row->created_at->format('Y-m-d H:i'),
+      $row['id'],
+      $row['status'],
+      $row['created_at'],
     ];
 
     foreach ($this->columns as $column) {
-      $answer = $row->response_data[$column] ?? '-';
-      $data[] = is_array($answer) ? implode(', ', $answer) : $answer;
+      $data[] = $row[$column] ?? '-';
     }
 
     return $data;

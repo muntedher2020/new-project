@@ -4,10 +4,11 @@ namespace App\Livewire\Backend\ElectronicForms;
 
 use Livewire\Component;
 use Livewire\WithPagination;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Backend\ElectronicForms\FormResponses as FormResponsesModel;
-use App\Models\Backend\ElectronicForms\ElectronicForms;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Models\Backend\ElectronicForms\ElectronicForms;
+use App\Models\Backend\ElectronicForms\FormResponses as FormResponsesModel;
 
 class FormResponses extends Component
 {
@@ -177,6 +178,14 @@ class FormResponses extends Component
     }
   }
 
+  public function getFieldLabelsProperty()
+  {
+    return DB::table('form_fields')
+      ->where('electronic_forms_id', $this->formId)
+      ->pluck('label', 'name')
+      ->toArray();
+  }
+
   public function render()
   {
     $form = ElectronicForms::findOrFail($this->formId);
@@ -202,6 +211,7 @@ class FormResponses extends Component
     return view('livewire.backend.electronic-forms.form-responses', [
       'form' => $form,
       'responses' => $this->responses,
+      'fieldLabels' => $this->fieldLabels,
       'statuses' => $statuses,
       'totalPending' => $totalPending,
       'totalApproved' => $totalApproved,

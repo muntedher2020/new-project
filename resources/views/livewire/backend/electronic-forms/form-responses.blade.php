@@ -198,8 +198,8 @@
             }
             @endphp
             @foreach($allQuestions as $question)
-            <th class="text-nowrap" style="max-width: 150px;">
-              <small>{{ \Illuminate\Support\Str::limit($question, 30) }}</small>
+            <th class="text-nowrap">
+              <small>{{ $this->fieldLabels[$question] ?? $question }}</small>
             </th>
             @endforeach
             <th wire:click="sortBy('status')" style="cursor: pointer;" class="text-nowrap">
