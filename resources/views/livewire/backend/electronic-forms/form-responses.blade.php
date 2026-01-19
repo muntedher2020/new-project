@@ -236,7 +236,6 @@
               @endphp
 
               @if($answer)
-              {{-- 1. التحقق إذا كانت الإجابة عبارة عن ملف مرفوع --}}
               @if(is_array($answer) && isset($answer['path']))
               <div class="d-flex flex-column">
                 <a href="{{ asset('storage/' . $answer['path']) }}" target="_blank"
@@ -248,10 +247,8 @@
                   {{ round(($answer['size'] ?? 0) / 1024, 2) }} KB
                 </small>
               </div>
-              {{-- 2. التحقق إذا كانت خيارات متعددة (ليست ملفاً) --}}
               @elseif(is_array($answer))
               <span class="badge bg-light text-dark">{{ implode(', ', $answer) }}</span>
-              {{-- 3. نص عادي --}}
               @else
               <span class="text-dark">{{ \Illuminate\Support\Str::limit($answer, 40) }}</span>
               @endif
