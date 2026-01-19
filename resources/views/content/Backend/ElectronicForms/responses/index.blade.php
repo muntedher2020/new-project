@@ -18,12 +18,10 @@ $configData = Helper::appClasses();
   <!-- الجدول الرئيسي -->
   <div class="card shadow-sm">
     <div class="card-body">
-      <!-- Livewire Component -->
       @livewire('backend.electronic-forms.form-responses', ['formId' => $form->id], key('form-responses-' .
       $form->id))
     </div>
   </div>
-</div>
 </div>
 
 @endsection

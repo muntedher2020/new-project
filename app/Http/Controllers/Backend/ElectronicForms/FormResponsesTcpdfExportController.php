@@ -20,9 +20,6 @@ class FormResponsesTcpdfExportController extends Controller
   {
     try {
       $form = ElectronicForms::findOrFail($formId);
-
-      // 1. جلب خريطة الأسماء العربية للحقول
-      // نفترض أن الجدول هو form_fields والحقول هي field_name و field_label
       $fieldLabels = DB::table('form_fields')
         ->where('electronic_forms_id', $formId)
         ->pluck('label', 'name')
@@ -70,12 +67,9 @@ class FormResponsesTcpdfExportController extends Controller
       $pdf->Cell(30, 10, 'الحالة', 1, 0, 'C', 1);
       $pdf->Cell(35, 10, 'التاريخ', 1, 0, 'C', 1);
       $pdf->Cell(192, 10, 'بيانات الاستمارة (بالأسماء العربية)', 1, 1, 'C', 1);
-
-      // محتوى الجدول
       $pdf->SetFont('freeserif', '', 9);
       $fill = false;
 
-      // المتغير المطلوب للتخزين التراكمي حسب تعليماتك السابقة
       $totalStorage = 0;
 
       foreach ($responses as $row) {
@@ -83,7 +77,6 @@ class FormResponsesTcpdfExportController extends Controller
 
         $pdf->Cell(20, 8, $row->id, 1, 0, 'C', 1);
 
-        // ترجمة الحالة للعربية للعرض
         $statusAr = [
           'pending' => 'قيد الانتظار',
           'approved' => 'موافق عليه',
@@ -94,29 +87,21 @@ class FormResponsesTcpdfExportController extends Controller
 
         $pdf->Cell(35, 8, $row->created_at->format('Y-m-d'), 1, 0, 'C', 1);
 
-        // 2. تجميع البيانات مع تحويل المفاتيح لأسماء عربية
         $dataText = "";
         if (is_array($row->response_data)) {
           foreach ($row->response_data as $key => $val) {
-            // جلب الاسم العربي من الخريطة، إذا لم يوجد نستخدم المفتاح الأصلي
             $label = $fieldLabels[$key] ?? $key;
 
             $valText = is_array($val) ? implode(', ', $val) : $val;
             $dataText .= "• " . $label . ": " . $valText . " \n";
-
-            // مثال لإضافة التخزين التراكمي إذا كان الحقل يخص التخزين
             if (str_contains($key, 'storage') || str_contains($key, 'capacity')) {
               $totalStorage += (float)$val;
             }
           }
         }
-
-        // استخدام MultiCell للسماح بتعدد الأسطر داخل الخلية لبيانات الاستمارة
         $pdf->MultiCell(192, 8, $dataText, 1, 'R', $fill, 1);
         $fill = !$fill;
       }
-
-      // إضافة سطر التخزين التراكمي في نهاية التقرير إذا رغبت
       if ($totalStorage > 0) {
         $pdf->Ln(2);
         $pdf->SetFont('freeserif', 'B', 11);

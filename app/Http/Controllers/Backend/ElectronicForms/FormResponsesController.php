@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Backend\ElectronicForms;
 use Illuminate\Http\Request;
 use App\Exports\FormResponsesExport;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\Backend\ElectronicForms\ElectronicForms;
@@ -85,9 +84,7 @@ class FormResponsesController extends Controller
     return back()->with('success', 'تم حذف الإجابات المحددة بنجاح');
   }
 
-  /**
-   * تصدير البيانات إلى إكسل بالأسماء العربية
-   */
+
   public function exportExcel(Request $request, $formId)
   {
     $query = FormResponsesModel::where('electronic_forms_id', $formId);
@@ -97,16 +94,14 @@ class FormResponsesController extends Controller
 
     $responses = $query->orderBy('created_at', 'desc')->get();
 
-    // جلب الأسماء العربية من جدول الحقول بناءً على الصورة المرفقة
     $fieldLabels = DB::table('form_fields')
       ->where('electronic_forms_id', $formId)
-      ->pluck('label', 'name') // 'label' هو العربي و 'name' هو الإنجليزي في الصورة
+      ->pluck('label', 'name')
       ->toArray();
 
     $processedData = [];
     $allArabicLabels = [];
 
-    // تحديد كافة الأعمدة العربية الفريدة الموجودة في الردود
     foreach ($responses as $resp) {
       if (is_array($resp->response_data)) {
         foreach ($resp->response_data as $key => $value) {
@@ -119,7 +114,6 @@ class FormResponsesController extends Controller
     }
 
     foreach ($responses as $resp) {
-      // تحويل الحالة للعربية
       $statusAr = [
         'pending' => 'قيد الانتظار',
         'approved' => 'موافق عليه',
@@ -133,9 +127,7 @@ class FormResponsesController extends Controller
         'created_at' => $resp->created_at->format('Y-m-d H:i'),
       ];
 
-      // تعبئة البيانات لكل عمود عربي
       foreach ($allArabicLabels as $label) {
-        // البحث عن المفتاح الإنجليزي الذي يقابل هذا العنوان العربي
         $englishKey = array_search($label, $fieldLabels);
         $keyToUse = ($englishKey !== false) ? $englishKey : $label;
 
@@ -145,25 +137,9 @@ class FormResponsesController extends Controller
 
       $processedData[] = $row;
     }
-
-    // تمرير المصفوفة المعالجة (Processed Data)
     return Excel::download(
       new FormResponsesExport(collect($processedData), $allArabicLabels),
       "responses-form-{$formId}.xlsx"
     );
-  }
-
-  /**
-   * دالة مساعدة لترجمة الحالات
-   */
-  private function translateStatus($status)
-  {
-    $statuses = [
-      'pending' => 'قيد الانتظار',
-      'approved' => 'موافق عليه',
-      'rejected' => 'مرفوض',
-      'under_review' => 'تحت المراجعة',
-    ];
-    return $statuses[$status] ?? $status;
   }
 }
