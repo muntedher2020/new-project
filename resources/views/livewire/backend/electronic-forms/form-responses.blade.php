@@ -234,9 +234,24 @@
               $responseData = $response->response_data;
               $answer = $responseData[$question] ?? null;
               @endphp
+
               @if($answer)
-              @if(is_array($answer))
+              {{-- 1. التحقق إذا كانت الإجابة عبارة عن ملف مرفوع --}}
+              @if(is_array($answer) && isset($answer['path']))
+              <div class="d-flex flex-column">
+                <a href="{{ asset('storage/' . $answer['path']) }}" target="_blank"
+                  class="btn btn-sm btn-label-primary waves-effect py-1 px-2" title="{{ $answer['original_name'] }}">
+                  <i class="ri-file-download-line me-1"></i>
+                  عرض الملف
+                </a>
+                <small class="text-muted mt-1" style="font-size: 10px;">
+                  {{ round(($answer['size'] ?? 0) / 1024, 2) }} KB
+                </small>
+              </div>
+              {{-- 2. التحقق إذا كانت خيارات متعددة (ليست ملفاً) --}}
+              @elseif(is_array($answer))
               <span class="badge bg-light text-dark">{{ implode(', ', $answer) }}</span>
+              {{-- 3. نص عادي --}}
               @else
               <span class="text-dark">{{ \Illuminate\Support\Str::limit($answer, 40) }}</span>
               @endif
