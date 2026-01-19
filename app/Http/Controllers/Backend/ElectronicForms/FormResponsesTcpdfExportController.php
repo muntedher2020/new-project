@@ -2,124 +2,93 @@
 
 namespace App\Http\Controllers\Backend\ElectronicForms;
 
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 use App\Models\Backend\ElectronicForms\ElectronicForms;
 use App\Models\Backend\ElectronicForms\FormResponses as FormResponsesModel;
 use TCPDF;
 
 class FormResponsesTcpdfExportController extends Controller
 {
-  public function __construct()
-  {
-    $this->middleware('auth');
-  }
-
-  public function exportPdf(Request $request, $formId)
-  {
-    $form = ElectronicForms::findOrFail($formId);
-
-    $query = FormResponsesModel::where('electronic_forms_id', $formId);
-
-    // تطبيق الفلاتر إن وجدت
-    if ($request->has('status') && $request->status) {
-      $query->where('status', $request->status);
+    public function __construct()
+    {
+        $this->middleware('auth');
     }
 
-    if ($request->has('search') && $request->search) {
-      $search = $request->search;
-      $query->where(function ($q) use ($search) {
-        $q->where('ip_address', 'like', "%{$search}%")
-          ->orWhere('browser_fingerprint', 'like', "%{$search}%")
-          ->orWhere('submission_hash', 'like', "%{$search}%");
-      });
-    }
+    public function exportPdf(Request $request, $formId)
+    {
+        try {
+            $form = ElectronicForms::findOrFail($formId);
+            $query = FormResponsesModel::where('electronic_forms_id', $formId);
 
-    $responses = $query->orderBy('created_at', 'desc')->get();
+            // تطبيق الفلاتر
+            if ($request->filled('status')) {
+                $query->where('status', $request->status);
+            }
+            if ($request->filled('selected')) {
+                $query->whereIn('id', explode(',', $request->selected));
+            }
 
-    $statuses = [
-      'pending' => 'قيد الانتظار',
-      'approved' => 'موافق عليه',
-      'rejected' => 'مرفوض',
-      'under_review' => 'تحت المراجعة',
-    ];
+            $responses = $query->orderBy('created_at', 'desc')->get();
 
-    // إنشاء PDF باستخدام TCPDF
-    $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+            // إنشاء PDF (نفس نهج Departments)
+            $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false); // 'L' للوضع العرضي لكثرة البيانات
 
-    // تعيين معلومات الوثيقة
-    $pdf->SetCreator(PDF_CREATOR);
-    $pdf->SetAuthor('News Website');
-    $pdf->SetTitle('نتائج - ' . $form->title);
-    $pdf->SetSubject('نتائج الاستمارة');
+            $pdf->SetCreator('Laravel System');
+            $pdf->SetTitle('تقرير نتائج: ' . $form->title);
 
-    // تعيين الهوامش
-    $pdf->SetMargins(10, 10, 10);
-    $pdf->SetAutoPageBreak(TRUE, 15);
+            // إعدادات اللغة والخط (freeserif يدعم العربية بشكل ممتاز)
+            $pdf->setLanguageArray([
+                'a_meta_charset' => 'UTF-8',
+                'a_meta_dir' => 'rtl',
+                'a_meta_language' => 'ar',
+                'w_page' => 'صفحة'
+            ]);
 
-    // إضافة صفحة
-    $pdf->AddPage();
+            $pdf->SetFont('freeserif', '', 12);
+            $pdf->SetMargins(10, 10, 10);
+            $pdf->AddPage();
 
-    // تعيين الخط
-    $pdf->SetFont('dejavusans', '', 12);
+            // العنوان
+            $pdf->SetFont('freeserif', 'B', 16);
+            $pdf->Cell(0, 10, 'نتائج استمارة: ' . $form->title, 0, 1, 'C');
+            $pdf->Ln(5);
 
-    // العنوان
-    $pdf->SetFont('dejavusans-bold', '', 16);
-    $pdf->Cell(0, 10, 'نتائج الاستمارة: ' . $form->title, 0, 1, 'R');
+            // رأس الجدول
+            $pdf->SetFont('freeserif', 'B', 10);
+            $pdf->SetFillColor(220, 220, 220);
+            $pdf->Cell(20, 10, 'ID', 1, 0, 'C', 1);
+            $pdf->Cell(40, 10, 'الحالة', 1, 0, 'C', 1);
+            $pdf->Cell(40, 10, 'التاريخ', 1, 0, 'C', 1);
+            $pdf->Cell(170, 10, 'بيانات الاستمارة', 1, 1, 'C', 1);
 
-    $pdf->SetFont('dejavusans', '', 10);
-    $pdf->Cell(0, 5, 'التاريخ: ' . date('Y-m-d H:i:s'), 0, 1, 'R');
-    $pdf->Ln(5);
+            // محتوى الجدول
+            $pdf->SetFont('freeserif', '', 9);
+            $fill = false;
+            $totalStorage = 0; // حسب طلبك السابق للتخزين التراكمي
 
-    // الجدول
-    $pdf->SetFont('dejavusans-bold', '', 11);
-    $pdf->SetFillColor(200, 220, 255);
+            foreach ($responses as $row) {
+                $pdf->SetFillColor($fill ? 245 : 255);
 
-    // رؤوس الجدول
-    $pdf->Cell(15, 7, '#', 1, 0, 'C', true);
-    $pdf->Cell(40, 7, 'المستخدم', 1, 0, 'R', true);
-    $pdf->Cell(60, 7, 'الإجابات', 1, 0, 'R', true);
-    $pdf->Cell(30, 7, 'الحالة', 1, 0, 'R', true);
-    $pdf->Cell(35, 7, 'التاريخ', 1, 1, 'R', true);
+                $pdf->Cell(20, 8, $row->id, 1, 0, 'C', 1);
+                $pdf->Cell(40, 8, $row->status, 1, 0, 'C', 1);
+                $pdf->Cell(40, 8, $row->created_at->format('Y-m-d'), 1, 0, 'C', 1);
 
-    // البيانات
-    $pdf->SetFont('dejavusans', '', 9);
-    $pdf->SetFillColor(240, 245, 250);
+                // تجميع البيانات في نص واحد للخلية الأخيرة
+                $dataText = "";
+                foreach($row->response_data as $key => $val) {
+                    $valText = is_array($val) ? implode(',', $val) : $val;
+                    $dataText .= "$key: $valText | ";
+                }
 
-    $count = 0;
-    foreach ($responses as $response) {
-      $count++;
-      $fill = ($count % 2 == 0) ? true : false;
+                $pdf->MultiCell(170, 8, $dataText, 1, 'R', $fill, 1);
+                $fill = !$fill;
+            }
 
-      // رقم التقديم
-      $pdf->Cell(15, 6, $response->id, 1, 0, 'C', $fill);
+            return $pdf->Output("responses-{$formId}.pdf", 'I');
 
-      // المستخدم
-      $userName = $response->user ? $response->user->name : 'غير مسجل';
-      $pdf->Cell(40, 6, $userName, 1, 0, 'R', $fill);
-
-      // الإجابات (معاينة)
-      $responseDataPreview = '';
-      if ($response->response_data && is_array($response->response_data)) {
-        $items = array_slice($response->response_data, 0, 1);
-        foreach ($items as $question => $answer) {
-          $answerText = is_array($answer) ? implode(', ', $answer) : $answer;
-          $responseDataPreview .= substr($question, 0, 20) . ': ' . substr($answerText, 0, 20);
+        } catch (\Exception $e) {
+            return back()->with('error', 'خطأ في إنشاء PDF: ' . $e->getMessage());
         }
-      }
-      $pdf->Cell(60, 6, substr($responseDataPreview, 0, 40), 1, 0, 'R', $fill);
-
-      // الحالة
-      $statusLabel = $statuses[$response->status] ?? $response->status;
-      $pdf->Cell(30, 6, $statusLabel, 1, 0, 'R', $fill);
-
-      // التاريخ
-      $pdf->Cell(35, 6, $response->created_at->format('Y-m-d H:i'), 1, 1, 'R', $fill);
     }
-
-    $fileName = 'نتائج_' . $form->slug . '_' . date('Y-m-d_H-i-s') . '.pdf';
-
-    return $pdf->Output($fileName, 'D');
-  }
 }

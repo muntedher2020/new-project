@@ -47,8 +47,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/{responseId}', [FormResponsesController::class, 'destroy'])->name('form-responses.destroy');
         Route::post('/bulk-update', [FormResponsesController::class, 'bulkUpdate'])->name('form-responses.bulk-update');
         Route::delete('/', [FormResponsesController::class, 'bulkDelete'])->name('form-responses.bulk-delete');
-        Route::get('/print-view', [FormResponsesPrintController::class, 'printView'])->name('form-responses.print.view');
-        Route::get('/export-pdf', [FormResponsesTcpdfExportController::class, 'exportPdf'])->name('form-responses.export.pdf.tcpdf');
+        Route::get('/export/pdf', [FormResponsesTcpdfExportController::class, 'exportPdf'])->name('form-responses.export.pdf.tcpdf');
+        Route::get('/export/excel', [FormResponsesController::class, 'exportExcel'])->name('form-responses.export.excel');
       });
     });
 

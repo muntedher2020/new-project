@@ -7,6 +7,7 @@ use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Backend\ElectronicForms\FormResponses as FormResponsesModel;
 use App\Models\Backend\ElectronicForms\ElectronicForms;
+use Maatwebsite\Excel\Facades\Excel;
 
 class FormResponses extends Component
 {
@@ -41,15 +42,28 @@ class FormResponses extends Component
     $form = ElectronicForms::findOrFail($formId);
   }
 
-  public function getResponsesProperty()
+  private function baseQuery()
   {
     $query = FormResponsesModel::where('electronic_forms_id', $this->formId);
 
     if ($this->search) {
-      $query->where(function ($q) {
-        $q->where('ip_address', 'like', "%{$this->search}%")
-          ->orWhere('browser_fingerprint', 'like', "%{$this->search}%")
-          ->orWhere('submission_hash', 'like', "%{$this->search}%");
+      $search = trim($this->search);
+
+      $query->where(function ($q) use ($search) {
+        // 1. البحث في حقل الحالة (status)
+        $q->where('status', 'like', "%{$search}%")
+
+          // 2. البحث في البيانات النصية (الإنجليزية والأرقام)
+          ->orWhere('response_data', 'like', "%{$search}%");
+
+        // 3. البحث في البيانات العربية (معالجة الـ Unicode)
+        if (preg_match('/[أ-ي]/ui', $search)) {
+          $unicodeSearch = trim(json_encode($search), '"');
+          // الهروب المزدوج للمائل العكسي لضمان المطابقة في SQL
+          $escapedSearch = str_replace('\\', '\\\\', $unicodeSearch);
+
+          $q->orWhere('response_data', 'like', "%{$escapedSearch}%");
+        }
       });
     }
 
@@ -57,7 +71,13 @@ class FormResponses extends Component
       $query->where('status', $this->status);
     }
 
-    return $query->orderBy($this->sortField, $this->sortDirection)
+    return $query;
+  }
+
+  public function getResponsesProperty()
+  {
+    return $this->baseQuery()
+      ->orderBy($this->sortField, $this->sortDirection)
       ->paginate($this->perPage);
   }
 
@@ -74,10 +94,25 @@ class FormResponses extends Component
   public function updatedSelectAll($value)
   {
     if ($value) {
+      // تحديد العناصر الموجودة في الصفحة الحالية فقط
       $this->selectedRows = $this->responses->pluck('id')->map(fn($id) => (string) $id)->toArray();
     } else {
       $this->selectedRows = [];
     }
+  }
+
+  // 2. تصفير التحديد عند تغيير الصفحة أو البحث لضمان عدم حدوث أخطاء
+  public function updatedSearch()
+  {
+    $this->resetPage();
+    $this->selectedRows = [];
+    $this->selectAll = false;
+  }
+  public function updatedStatus()
+  {
+    $this->resetPage();
+    $this->selectedRows = [];
+    $this->selectAll = false;
   }
 
   public function updatedSelectedRows()
@@ -126,6 +161,22 @@ class FormResponses extends Component
     $this->dispatch('export-selected', selectedRows: $this->selectedRows);
   }
 
+  public function getExportUrl($type)
+  {
+    $params = [
+      'formId' => $this->formId,
+      'search' => $this->search,
+      'status' => $this->status,
+      'selected' => implode(',', $this->selectedRows)
+    ];
+
+    if ($type === 'pdf') {
+      return route('form-responses.export.pdf.tcpdf', $params);
+    } elseif ($type === 'excel') {
+      return route('form-responses.export.excel', $params); // تأكد من تعريف المسار في web.php
+    }
+  }
+
   public function render()
   {
     $form = ElectronicForms::findOrFail($this->formId);
@@ -137,10 +188,16 @@ class FormResponses extends Component
       'under_review' => 'تحت المراجعة',
     ];
 
-    $totalPending = FormResponsesModel::where('electronic_forms_id', $this->formId)->where('status', 'pending')->count();
-    $totalApproved = FormResponsesModel::where('electronic_forms_id', $this->formId)->where('status', 'approved')->count();
-    $totalRejected = FormResponsesModel::where('electronic_forms_id', $this->formId)->where('status', 'rejected')->count();
+    // حساب الإحصائيات الكلية (مستقلة عن البحث والفلاترات)
     $totalResponses = FormResponsesModel::where('electronic_forms_id', $this->formId)->count();
+    $totalPending = FormResponsesModel::where('electronic_forms_id', $this->formId)
+      ->where('status', 'pending')->count();
+    $totalApproved = FormResponsesModel::where('electronic_forms_id', $this->formId)
+      ->where('status', 'approved')->count();
+    $totalRejected = FormResponsesModel::where('electronic_forms_id', $this->formId)
+      ->where('status', 'rejected')->count();
+    $totalUnderReview = FormResponsesModel::where('electronic_forms_id', $this->formId)
+      ->where('status', 'under_review')->count();
 
     return view('livewire.backend.electronic-forms.form-responses', [
       'form' => $form,
@@ -149,6 +206,7 @@ class FormResponses extends Component
       'totalPending' => $totalPending,
       'totalApproved' => $totalApproved,
       'totalRejected' => $totalRejected,
+      'totalUnderReview' => $totalUnderReview,
       'totalResponses' => $totalResponses,
     ]);
   }

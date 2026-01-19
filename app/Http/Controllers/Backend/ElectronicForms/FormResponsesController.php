@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Backend\ElectronicForms;
 
 use Illuminate\Http\Request;
+use App\Exports\FormResponsesExport;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
 use App\Models\Backend\ElectronicForms\ElectronicForms;
 use App\Models\Backend\ElectronicForms\FormResponses as FormResponsesModel;
 
@@ -89,4 +91,32 @@ class FormResponsesController extends Controller
 
     return back()->with('success', 'تم حذف الإجابات المحددة بنجاح');
   }
+
+public function exportExcel(Request $request, $formId)
+{
+    $query = FormResponsesModel::where('electronic_forms_id', $formId);
+
+    // الفلاتر
+    if ($request->status) $query->where('status', $request->status);
+    if ($request->selected) $query->whereIn('id', explode(',', $request->selected));
+
+    $responses = $query->get();
+
+    // استخراج أسماء الأعمدة من البيانات
+    $allColumns = [];
+    foreach ($responses as $resp) {
+        if (is_array($resp->response_data)) {
+            foreach ($resp->response_data as $key => $value) {
+                if (!in_array($key, $allColumns)) $allColumns[] = $key;
+            }
+        }
+    }
+
+    // تصدير الملف بصيغة Xlsx
+    return Excel::download(
+        new FormResponsesExport($responses, $allColumns),
+        "responses-form-{$formId}.xlsx",
+        \Maatwebsite\Excel\Excel::XLSX
+    );
+}
 }
